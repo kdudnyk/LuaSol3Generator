@@ -1,0 +1,9 @@
+void register_type_${struct.name}(sol::state& state)
+{
+	state.new_usertype<${struct.name}>("${struct.name}"
+	% for item in struct.fields:
+		,"${item}"
+		,&${struct.name}::${item}
+	% endfor
+	);
+}

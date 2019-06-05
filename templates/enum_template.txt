@@ -1,0 +1,9 @@
+void register_enum_${enum.name}(sol::state& state)
+{
+	state.new_enum("${enum.name}"
+	% for item in enum.values:
+		,"${item}"
+		,${enum.name}::${item}
+	% endfor
+	);
+}
