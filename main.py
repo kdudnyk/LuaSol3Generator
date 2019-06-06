@@ -106,6 +106,7 @@ def filter_node_list_by_classes(
             function = Method(i.spelling)
             signature = i.type.get_result().spelling + i.displayname[i.displayname.find('('):i.displayname.find(')')+1]
 
+            # print("function is {}, signature {}".format(i.type.kind,signature))
             overload_check = free_functions.get(function.name)
             if free_functions.get(function.name):
                 overload_check.overloaded = True
@@ -113,6 +114,16 @@ def filter_node_list_by_classes(
             else:
                 function.signatures.append(signature)
                 free_functions[function.name] = function
+        else:
+            if i.kind == clang.cindex.CursorKind.FUNCTION_TEMPLATE:
+                # print("III {}".format(i.spelling))
+                function = Method(i.spelling)
+                overload_check = free_functions.get(function.name)
+                if free_functions.get(function.name):
+                    overload_check.overloaded = True
+                else:
+                    function.overloaded = True
+                    free_functions[function.name] = function
 
 
 translation_unit = index.parse(sys.argv[1], args=['-std=c++17',sys.argv[3]])
