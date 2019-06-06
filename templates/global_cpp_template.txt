@@ -3,4 +3,5 @@ void register_library_${library_name}(sol::state& state)
 	% for item in entries:
 	${item}(state);
 	% endfor
+	register_${library_name}_free_functions(state);
 }

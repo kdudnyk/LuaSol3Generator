@@ -9,6 +9,7 @@ index = clang.cindex.Index.create()
 
 global_registry = []
 registry = []
+free_functions = {}
 
 class Method:
     def __init__(self,name):
@@ -21,6 +22,7 @@ def filter_node_list_by_classes(
     nodes: typing.Iterable[clang.cindex.Cursor]
 ) -> typing.Iterable[clang.cindex.Cursor]:
     global global_registry
+    global free_functions
 
     for i in nodes:
         if i.kind in [clang.cindex.CursorKind.CLASS_DECL,clang.cindex.CursorKind.STRUCT_DECL]:
@@ -44,7 +46,6 @@ def filter_node_list_by_classes(
                             signature = child.type.get_result().spelling + child.displayname[child.displayname.find('('):child.displayname.find(')')+1]
                             if child.is_const_method():
                                 signature += "const"
-                            print("class {} return type is {}".format(child.spelling,signature))
 
                             overload_check = usertype_methods.get(method.name)
                             if usertype_methods.get(method.name):
@@ -53,6 +54,7 @@ def filter_node_list_by_classes(
                             else:
                                 method.signatures.append(signature)
                                 usertype_methods[method.name] = method
+
 
                 registry.append((Template(filename="templates/class_template.txt").render(name=usertype_name,fields=usertype_fields, methods=usertype_methods)))
                 global_registry.append("register_type_{}".format(i.displayname))
@@ -66,9 +68,24 @@ def filter_node_list_by_classes(
             registry.append(Template(filename="templates/enum_template.txt").render(name=enum_name, values=enum_values))
             global_registry.append("register_enum_{}".format(i.displayname))
 
+        elif i.kind == clang.cindex.CursorKind.FUNCTION_DECL:
+            function = Method(i.spelling)
+            signature = i.type.get_result().spelling + i.displayname[i.displayname.find('('):i.displayname.find(')')+1]
+
+            overload_check = free_functions.get(function.name)
+            if free_functions.get(function.name):
+                overload_check.overloaded = True
+                overload_check.signatures.append(signature)
+            else:
+                function.signatures.append(signature)
+                free_functions[function.name] = function
+
+
 translation_unit = index.parse(sys.argv[1], args=['-std=c++17',sys.argv[3]])
 # translation_unit = index.parse("/tmp/test.h", args=['-std=c++17',sys.argv[3]])
 filter_node_list_by_classes(translation_unit.cursor.get_children())
+
+print()
 
 with open(sys.argv[2]+".h", 'w') as f:
 
@@ -79,3 +96,4 @@ with open(sys.argv[2]+".cpp", 'w') as f:
     f.write("#include <"+ntpath.basename(sys.argv[2]+".h")+">\n\n")
     f.write("".join(registry))
     f.write((Template(filename="templates/global_cpp_template.txt").render(library_name="Box2D", entries=global_registry)))
+    f.write((Template(filename="templates/free_functions_template.txt").render(library_name="Box2D",functions=free_functions)))

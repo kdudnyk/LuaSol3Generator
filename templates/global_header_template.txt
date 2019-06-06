@@ -8,5 +8,6 @@
 void ${item}(sol::state& state);
 % endfor
 void register_library_${library_name}(sol::state& state);
+void register_${library_name}_free_functions(sol::state& state)
 
 #endif // BINDER_${library_name}_H
