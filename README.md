@@ -13,7 +13,11 @@ sol3
 
 ## How to use
 simply run :
-`python ${LIBRARY_INCLUDES_DIR} ${OUTPUT_FILE}`
+`python main.py ${LIBRARY_INCLUDES_FILE} ${OUTPUT_FILE_PREFIX} ${LIBRARY_INCLUDES_DIR}`
+
+And example to bind box2d library is :
+
+`python main.py /tmp/box2d/include/Box2D/Box2D.h /tmp/result -I/tmp/box2d/include/`
 
 ### What is working ?
 As stated before - this is yet - a PoC - so right now it does:
