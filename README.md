@@ -11,13 +11,27 @@ Python 3.6
 libclang
 sol3
 
-## How to use
+## Usage
+
+usage: main.py [-h] file folder includes library_name
+
+positional arguments:
+  file          Filename of meta header file of the library
+  folder        A folder where you want your binding to be created in
+  includes      Path to the includes folder of the targeted library
+  library_name  Name of the targeted library, will be used to prefix filenames
+                and usertype names
+
+optional arguments:
+  -h, --help    show this help message and exi
+
+## Usage example
+
 simply run :
-`python main.py ${LIBRARY_INCLUDES_FILE} ${OUTPUT_FILE_PREFIX} ${LIBRARY_INCLUDES_DIR}`
+`python3 main.py /tmp/Box2D/includes/Box2d.h /tmp/output/ /tmp/Box2D/includes/ Box2D`
 
-And example to bind box2d library is :
-
-`python main.py /tmp/box2d/include/Box2D/Box2D.h /tmp/result -I/tmp/box2d/include/`
+## Example of Box2 binding generation
+Can be found at example folder :-)
 
 ### What is working ?
 As stated before - this is yet - a PoC - so right now it does:
