@@ -1,0 +1,12 @@
+#ifndef BINDER_${library_name}_H
+#define BINDER_${library_name}_H
+
+#include <Box2D/Box2D.h>
+#include <sol/sol.hpp>
+    
+% for item in entries:
+void ${item}(sol::state& state);
+% endfor
+void register_library_${library_name}(sol::state& state);
+
+#endif // BINDER_${library_name}_H

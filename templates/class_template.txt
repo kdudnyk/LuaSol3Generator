@@ -1,9 +1,27 @@
-void register_type_${struct.name}(sol::state& state)
+void register_type_${name}(sol::state& state)
 {
-	state.new_usertype<${struct.name}>("${struct.name}"
-	% for item in struct.fields:
-		,"${item}"
-		,&${struct.name}::${item}
+	state.new_usertype<${name}>("${name}"
+	// fields
+	% for field in fields:
+		,"${field}"
+		,&${name}::${field}
+	% endfor
+	// methods
+	% for method in methods.values():
+		% if method.overloaded:
+			,"${method.name}"
+			,sol::overload(
+			% for signature in method.signatures:
+				sol::resolve<${signature}>(&${name}::${method.name})
+				% if signature is not method.signatures[-1]:
+				,
+				% endif 
+			% endfor
+			)
+		% else:
+			,"${method.name}"
+			,&${name}::${method.name}
+		% endif
 	% endfor
 	);
 }
