@@ -2,10 +2,16 @@ void register_${library_name}_free_functions(sol::state& state)
 {
 	% for function in functions.values():
 		% if function.overloaded:
-			% for signature in function.signatures:
-				state.set_function("${function.name}",
-				sol::resolve<${signature}>(&${function.name}));
-			% endfor
+			% if function.signatures:
+					 state.set_function("${function.name}",sol::overload(
+				% for signature in function.signatures:
+					sol::resolve<${signature}>(&${function.name})
+					% if signature is not function.signatures[-1]:
+					,
+					% endif
+				% endfor
+					));
+			% endif
 		% else:
 			state.set_function("${function.name}",&${function.name});
 		% endif

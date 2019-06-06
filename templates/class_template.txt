@@ -64,5 +64,16 @@ void register_type_${name}(sol::state& state)
 			,${name}_${meta[1]}_overloads
 		% endfor
     % endif
+    % if parents:
+	  , sol::base_classes
+	  , sol::bases<
+	  % for base in parents:
+		${base}
+		% if base is not parents[-1]:
+		,
+		% endif
+	  % endfor
+	  >()
+    % endif
     );
 }
