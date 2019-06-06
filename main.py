@@ -172,22 +172,22 @@ with open(args.folder+"Bind_"+args.library_name+".h", 'w') as f:
 
 # write global binder with free functions
 with open(args.folder+"Bind_"+args.library_name+".cpp", 'w') as f:
-    f.write("#include <scripting/" + "Bind_" + args.library_name + ".h>\n\n")
+    f.write("#include <" + "Bind_" + args.library_name + ".h>\n\n")
     f.write((Template(filename="templates/global_cpp_template.txt").render(library_name=args.library_name, entries=global_registry)))
     f.write((Template(filename="templates/free_functions_template.txt").render(library_name=args.library_name,functions=free_functions)))
 
 # write bindings in a separate files ( for parallel compilation )
 for key,value in registries.items():
     with open(args.folder + "Bind_" + key + ".cpp", 'w') as f:
-        f.write("#include <scripting/" + "Bind_"+args.library_name+".h>\n\n")
+        f.write("#include <" + "Bind_"+args.library_name+".h>\n\n")
         f.write("".join(value))
 
 # write a simple CMakeLists.txt to include the library
 with open(args.folder+"bind_"+args.library_name+".cmake",'w') as f:
     f.write("SET(BIND_"+args.library_name+"_SOURCES \n")
-    f.write("src/scripting/Bind_" + args.library_name + ".h\n")
-    f.write("src/scripting/Bind_" + args.library_name + ".cpp\n")
+    f.write("Bind_" + args.library_name + ".h\n")
+    f.write("Bind_" + args.library_name + ".cpp\n")
     for key in registries.keys():
-        f.write("src/scripting/Bind_" + key + ".cpp\n")
+        f.write("Bind_" + key + ".cpp\n")
     f.write(")")
 
