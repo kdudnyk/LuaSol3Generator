@@ -1,20 +1,30 @@
-import typing
-from mako.template import Template
+import argparse
 import sys
-import clang.cindex
-import ntpath
-import os
+import typing
 from pathlib import Path
 
-# clang.cindex.Config.set_library_file('/usr/lib/x86_64-linux-gnu/libclang-9.so.1')
+import clang.cindex
+from mako.template import Template
+
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("file",help="Filename of meta header file of the library")
+parser.add_argument("folder",help="A folder where you want your binding to be created in")
+parser.add_argument("includes",help="Path to the includes folder of the targeted library")
+parser.add_argument("library_name",help="Name of the targeted library, will be used to prefix filenames and usertype names")
+args = parser.parse_args()
+
+
+# TODO get this as an argument
 clang.cindex.Config.set_library_path('/usr/lib/x86_64-linux-gnu/')
 index = clang.cindex.Index.create()
 
+
 global_registry = []
-# registry = {}
 registries = {}
 free_functions = {}
 
+# TODO get rid of
 class Method:
     def __init__(self,name):
         self.name = name
@@ -47,26 +57,23 @@ def filter_node_list_by_classes(
                         continue
 
                     if child.kind == clang.cindex.CursorKind.FIELD_DECL:
+                        # Seems like sol3 is binding to void* type, and thus fails
+                        # skip such cases for now
                         if child.type.kind == clang.cindex.TypeKind.POINTER:
-                            # print("potentially skipping {}".format(child.spelling))
                             skip = False
                             for chill in child.get_children():
-                                # print("chill {}, {}".format(chill.displayname,chill.type.kind))
                                 if chill.type.kind == clang.cindex.TypeKind.TYPEDEF:
                                     skip = True
                                     continue
-                            # print("Skiiping ? {}".format(skip))
                             if skip:
                                 continue
 
-                        # we are currently interested in only public fields which are non pointers
                         if child.access_specifier == clang.cindex.AccessSpecifier.PUBLIC:
-                                # and child.type.kind != clang.cindex.TypeKind.POINTER:
                             usertype_fields.append(child.displayname)
                     elif child.kind == clang.cindex.CursorKind.CXX_BASE_SPECIFIER:
                         usertype_parents.append(child.type.spelling)
                     elif child.kind == clang.cindex.CursorKind.CXX_METHOD:
-                        # skip operators for now
+                        # TODO support all operators in a better matter
                         if child.spelling.startswith("operator"):
                             arg1 = child.displayname[child.displayname.find('(')+1:child.displayname.find(')')]
                             arg1 = arg1.replace("const",'')
@@ -135,7 +142,6 @@ def filter_node_list_by_classes(
             function = Method(i.spelling)
             signature = i.type.get_result().spelling + i.displayname[i.displayname.find('('):i.displayname.find(')')+1]
 
-            # print("function is {}, signature {}".format(i.type.kind,signature))
             overload_check = free_functions.get(function.name)
             if overload_check:
                 overload_check.overloaded = True
@@ -145,7 +151,6 @@ def filter_node_list_by_classes(
                 free_functions[function.name] = function
 
         elif i.kind == clang.cindex.CursorKind.FUNCTION_TEMPLATE:
-                # print("III {}".format(i.spelling))
                 function = Method(i.spelling)
                 overload_check = free_functions.get(function.name)
                 if overload_check:
@@ -155,37 +160,33 @@ def filter_node_list_by_classes(
                     free_functions[function.name] = function
         else:
             pass
-            # print("Found i.kind=".format(i.kind))
 
 
-translation_unit = index.parse(sys.argv[1], args=['-std=c++17',sys.argv[3]])
+translation_unit = index.parse(args.file, args=['-std=c++17',"-I"+args.includes])
 # translation_unit = index.parse("/tmp/sample.h", args=['-std=c++17',sys.argv[3]])
 filter_node_list_by_classes(translation_unit.cursor.get_children())
 
-library = "Box2D"
+# write global header
+with open(args.folder+"Bind_"+args.library_name+".h", 'w') as f:
+    f.write((Template(filename="templates/global_header_template.txt").render(library_name=args.library_name, entries=global_registry)))
 
-with open(sys.argv[2]+"Bind_"+library+".h", 'w') as f:
-    f.write((Template(filename="templates/global_header_template.txt").render(library_name=library, entries=global_registry)))
+# write global binder with free functions
+with open(args.folder+"Bind_"+args.library_name+".cpp", 'w') as f:
+    f.write("#include <scripting/" + "Bind_" + args.library_name + ".h>\n\n")
+    f.write((Template(filename="templates/global_cpp_template.txt").render(library_name=args.library_name, entries=global_registry)))
+    f.write((Template(filename="templates/free_functions_template.txt").render(library_name=args.library_name,functions=free_functions)))
 
-with open(sys.argv[2]+"Bind_"+library+".cpp", 'w') as f:
-    f.write("#include <scripting/" + "Bind_" + library + ".h>\n\n")
-    f.write((Template(filename="templates/global_cpp_template.txt").render(library_name=library, entries=global_registry)))
-    f.write((Template(filename="templates/free_functions_template.txt").render(library_name=library,functions=free_functions)))
-
+# write bindings in a separate files ( for parallel compilation )
 for key,value in registries.items():
-    # print("Key is {}, values are {}".format(key,value))
-
-    with open(sys.argv[2] + "Bind_" + key + ".cpp", 'w') as f:
-        f.write("#include <scripting/" + "Bind_"+library+".h>\n\n")
+    with open(args.folder + "Bind_" + key + ".cpp", 'w') as f:
+        f.write("#include <scripting/" + "Bind_"+args.library_name+".h>\n\n")
         f.write("".join(value))
-        # f.write((Template(filename="templates/global_cpp_template.txt").render(library_name=library,
-        #                                                                        entries=value)))
-        # f.write((Template(filename="templates/free_functions_template.txt").render(library_name=library,
-        #                                                                            functions=free_functions)))
-with open(sys.argv[2]+"bind_"+library+".cmake",'w') as f:
-    f.write("SET(BIND_"+library+"_SOURCES \n")
-    f.write("src/scripting/Bind_" + library + ".h\n")
-    f.write("src/scripting/Bind_" + library + ".cpp\n")
+
+# write a simple CMakeLists.txt to include the library
+with open(args.folder+"bind_"+args.library_name+".cmake",'w') as f:
+    f.write("SET(BIND_"+args.library_name+"_SOURCES \n")
+    f.write("src/scripting/Bind_" + args.library_name + ".h\n")
+    f.write("src/scripting/Bind_" + args.library_name + ".cpp\n")
     for key in registries.keys():
         f.write("src/scripting/Bind_" + key + ".cpp\n")
     f.write(")")
