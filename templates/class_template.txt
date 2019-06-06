@@ -1,5 +1,27 @@
 void register_type_${name}(sol::state& state)
 {
+	% for meta in metas:
+		auto ${name}_${meta[1]}_overloads = sol::overload(
+			% for variant in meta[2]:
+			% if variant[0] == name+"&":
+			[](${variant[0]} left,const ${variant[1]} right) 
+			{
+				${name} ret = left;
+				ret ${meta[0]} right;
+			% else:
+			[](const ${variant[0]} left,${variant[1]} right) 
+			{
+				${name} ret = right;
+				ret ${meta[0]} left;
+			% endif
+				return ret;
+			}
+			% if variant is not meta[2][-1]:
+			,
+			% endif
+			% endfor
+		);
+	% endfor
 	state.new_usertype<${name}>("${name}"
 	// fields
 	% for field in fields:
@@ -23,5 +45,24 @@ void register_type_${name}(sol::state& state)
 			,&${name}::${method.name}
 		% endif
 	% endfor
-	);
+	// constructors
+	% if constructors:
+		,sol::call_constructor
+		,sol::constructors<
+		% for constructor in constructors:
+			${name}${constructor}
+			% if constructor is not constructors[-1]:
+			,
+			% endif
+		% endfor
+		>()
+    % endif
+    % if metas:
+    // metas
+		% for meta in metas:
+			,sol::meta_function::${meta[1]}
+			,${name}_${meta[1]}_overloads
+		% endfor
+    % endif
+    );
 }

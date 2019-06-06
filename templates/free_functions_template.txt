@@ -4,7 +4,7 @@ void register_${library_name}_free_functions(sol::state& state)
 		% if function.overloaded:
 			% for signature in function.signatures:
 				state.set_function("${function.name}",
-				sol::resolve<${signature}>(&${function.name});
+				sol::resolve<${signature}>(&${function.name}));
 			% endfor
 		% else:
 			state.set_function("${function.name}",&${function.name});
